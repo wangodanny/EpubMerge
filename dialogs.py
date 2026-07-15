@@ -3,6 +3,7 @@
 from __future__ import (unicode_literals, division,
                         print_function)
 
+import os
 import logging
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,8 @@ from PyQt5.Qt import (QDialog, QTableWidget, QMessageBox, QVBoxLayout, QHBoxLayo
                       QProgressDialog, QTimer, QDialogButtonBox, QPixmap, Qt,QAbstractItemView )
 
 from calibre.gui2 import error_dialog, warning_dialog, question_dialog, info_dialog
+from calibre.gui2 import choose_files
+from calibre.ebooks.metadata.epub import get_metadata
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.ebooks.metadata import fmt_sidx
 
@@ -183,6 +186,11 @@ class OrderEPUBsDialog(SizePersistedDialog):
         self.move_down_button.setIcon(QIcon(I('arrow-down.png')))
         self.move_down_button.clicked.connect(self.books_table.move_rows_down)
         button_layout.addWidget(self.move_down_button)
+        self.local_upload_button = QtGui.QToolButton(self)
+        self.local_upload_button.setToolTip(_('Add EPUBs from PC...'))
+        self.local_upload_button.setIcon(get_icon('add_book.png'))
+        self.local_upload_button.clicked.connect(self.local_upload)
+        button_layout.addWidget(self.local_upload_button)
         spacerItem1 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         button_layout.addItem(spacerItem1)
 
@@ -204,6 +212,49 @@ class OrderEPUBsDialog(SizePersistedDialog):
 
     def get_books(self):
         return self.books_table.get_books()
+    
+    def local_upload(self):
+        
+        files = choose_files(self, 'epubmerge:local_upload_dialog',
+                             _('Choose EPUB files to merge'),
+                             filters=[(_('EPUB files'), ['epub'])],
+                             all_files=False, select_only_single_file=False)
+        if not files:
+            return
+            
+        for filepath in files:
+            try:
+                with open(filepath, 'rb') as f:
+                    mi = get_metadata(f)
+                
+                book = {
+                    'good': True,
+                    'calibre_id': None,
+                    'title': mi.title or _('Unknown'),
+                    'authors': mi.authors or [_('Unknown')],
+                    'author_sort': mi.author_sort or _('Unknown'),
+                    'tags': mi.tags or [],
+                    'series': mi.series or '',
+                    'comments': mi.comments or '',
+                    'publisher': mi.publisher or '',
+                    'pubdate': mi.pubdate or None,
+                    'series_index': mi.series_index if mi.series else None,
+                    'languages': mi.languages or ['en'],
+                    'error': '',
+                    'epub': filepath,
+                    'epub_size': os.path.getsize(filepath)
+                }
+                
+                # Append to books_table
+                row = self.books_table.rowCount()
+                self.books_table.setRowCount(row + 1)
+                self.books_table.populate_table_row(row, book)
+                self.books_table.books[row] = book
+                
+            except Exception as e:
+                error_dialog(self, _('Error reading file'),
+                             _('Could not read metadata from %s:<br>%s') % (filepath, str(e)),
+                             show_copy_button=False).exec_()
 
 class StoryListTableWidget(QTableWidget):
 
