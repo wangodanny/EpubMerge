@@ -58,11 +58,11 @@ def LoopProgressDialog(gui,
                              status_prefix)
     # Mac OS X gets upset if the finish_function is called from inside
     # the real _LoopProgressDialog class.
-    
+
     # reflect old behavior.
     if not ld.wasCanceled():
         finish_function(book_list)
-        
+
 class _LoopProgressDialog(QProgressDialog):
     '''
     ProgressDialog displayed while fetching metadata for each story.
@@ -213,13 +213,13 @@ class OrderEPUBsDialog(SizePersistedDialog):
 
     def get_books(self):
         return self.books_table.get_books()
-    
+
     def populate_book_from_local_upload(self, book, db=None, tdir=None):
         try:
             filepath = book['epub']
             with open(filepath, 'rb') as f:
                 mi = get_metadata(f)
-            
+
             book['calibre_id'] = None
             book['title'] = mi.title or _('Unknown')
             book['authors'] = mi.authors or [_('Unknown')]
@@ -235,12 +235,12 @@ class OrderEPUBsDialog(SizePersistedDialog):
             book['epub_size'] = os.path.getsize(filepath)
 
             return book
-            
+
         except Exception as e:
             book['good'] = False
             book['error'] = str(e)
             raise e
-        
+
     def _append_book_to_table(self, book_list, db=None, tdir=None):
         failed_files = []
         for book in book_list:
@@ -251,23 +251,23 @@ class OrderEPUBsDialog(SizePersistedDialog):
                 self.books_table.books[row] = book
             else:
                 failed_files.append(f"{os.path.basename(book['epub'])}: {book.get('error') or book.get('comment')}")
-        
+
         self.books_table.resizeColumnsToContents()
-        
+
         if failed_files:
             error_dialog(self, _('Error reading files'),
                          _('Could not read metadata from the following files:<br><br>%s') % '<br>'.join(failed_files),
                          show_copy_button=False).exec_()
-    
+
     def local_upload(self):
-        
+
         files = choose_files(self, 'epubmerge:local_upload_dialog',
                              _('Choose EPUB files to merge'),
                              filters=[(_('EPUB files'), ['epub'])],
                              all_files=False, select_only_single_file=False)
         if not files:
             return
- 
+
         book_list = []
         for filepath in files:
             book_list.append({
