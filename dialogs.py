@@ -21,7 +21,8 @@ from PyQt5 import QtWidgets as QtGui
 from PyQt5.Qt import (QDialog, QTableWidget, QMessageBox, QVBoxLayout, QHBoxLayout, QGridLayout,
                       QPushButton, QProgressDialog, QLabel, QCheckBox, QIcon, QTextCursor,
                       QTextEdit, QLineEdit, QInputDialog, QComboBox, QClipboard,
-                      QProgressDialog, QTimer, QDialogButtonBox, QPixmap, Qt,QAbstractItemView )
+                      QProgressDialog, QTimer, QDialogButtonBox, QPixmap, Qt,QAbstractItemView,
+                      QTableWidgetItem, QGroupBox, QRadioButton )
 
 from calibre.gui2 import error_dialog, warning_dialog, question_dialog, info_dialog
 from calibre.gui2 import choose_files
@@ -147,6 +148,46 @@ class SeriesTableWidgetItem(ReadOnlyTableWidgetItem):
             return self.series_index < other.series_index
         else:
             return self.series_name < other.series_name
+
+class MergeTargetDialog(SizePersistedDialog):
+    def __init__(self, gui, header, prefs, icon, books,
+                 save_size_name='epubmerge:merge target dialog'):
+        SizePersistedDialog.__init__(self, gui, save_size_name)
+        self.gui = gui
+
+        self.setWindowTitle(header)
+        if icon:
+            self.setWindowIcon(icon)
+        
+        layout = QVBoxLayout(self)
+        
+        self.merge_group = QGroupBox(_("Select Merge Target"), self)
+        group_layout = QVBoxLayout()
+        self.merge_group.setLayout(group_layout)
+        
+        self.overwrite_combo = QComboBox(self)
+
+        self.library_books = {}
+        for b in books:
+            if b.get('calibre_id') is not None:
+                self.library_books[b['calibre_id']] = b
+                self.overwrite_combo.addItem(b['title'], b['calibre_id'])
+        
+        group_layout.addWidget(self.overwrite_combo)
+        layout.addWidget(self.merge_group)
+        
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+        
+    def get_target_title(self):
+        target_id = self.overwrite_combo.currentData()
+        return self.library_books[target_id]['title']
+
+    def get_target_id(self):
+        target_id = self.overwrite_combo.currentData()
+        return target_id
 
 class OrderEPUBsDialog(SizePersistedDialog):
     def __init__(self, gui, header, prefs, icon, books,
